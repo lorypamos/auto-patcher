@@ -1,0 +1,28 @@
+diff -Npruw stock-framework/smali/android/provider/Settings$System.smali pdroid-framework/smali/android/provider/Settings$System.smali
+--- stock-framework/smali/android/provider/Settings$System.smali	2014-01-20 11:40:39.527141237 +0100
++++ pdroid-framework/smali/android/provider/Settings$System.smali	2014-01-20 11:40:45.753091478 +0100
+@@ -1513,7 +1513,7 @@
+ 
+     sget-object v0, Landroid/provider/Settings$System;->MOVED_TO_GLOBAL:Ljava/util/HashSet;
+ 
+-    const-string v1, "mode_ringer"
++    const-string/jumbo v1, "mode_ringer"
+ 
+     invoke-virtual {v0, v1}, Ljava/util/HashSet;->add(Ljava/lang/Object;)Z
+ 
+@@ -1803,13 +1803,13 @@
+ 
+     const/4 v1, 0x7
+ 
+-    const-string v2, "mms_auto_retrieval"
++    const-string/jumbo v2, "mms_auto_retrieval"
+ 
+     aput-object v2, v0, v1
+ 
+     const/16 v1, 0x8
+ 
+-    const-string v2, "mms_auto_on_roaming"
++    const-string/jumbo v2, "mms_auto_on_roaming"
+ 
+     aput-object v2, v0, v1
+ 
