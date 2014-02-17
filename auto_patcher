@@ -1308,7 +1308,7 @@ patch_matcher () {
      #    cannot use success of patch process, skipped patch is stderr but okay for us.
      MATCH_SUCCESS=false
      for p in ${POSSIBLE_MATCHES[@]}; do
-          $PATCH_BINARY --dry-run -Nls -p${STRIP_LEVEL} -d tmp/${FILE}.out < ${p} &>> MATCH.log
+          $PATCH_BINARY --dry-run -Nls -p${STRIP_LEVEL} -d tmp/${FILE}.out < ${p} 2>&1 >> MATCH.log
           if ( [[ $(grep FAILED MATCH.log) = "" ]] ); then
                     # This below is temporary debug logging.
                     print_to_log "Succesful match found! Swapping $p for $FAILED_FILE!!"
@@ -2081,7 +2081,7 @@ for ((i=0; i < ${#PID[@]}; i++)); do
           IMG=${FILE##*/}
           STRIP_LEVEL=1
           printtask "... applying $IMG.patch ..."
-          $PATCH_BINARY -Nls -p$STRIP_LEVEL -d boot/ramdisk < $PARB/${IMG}.patch &>> "$LOG" || print_error "failed patching $FILE"
+          $PATCH_BINARY -Nls -p$STRIP_LEVEL -d boot/ramdisk < $PARB/${IMG}.patch 2>&1 >> "$LOG" || print_error "failed patching $FILE"
      done
 
 # Text Editing Functions --this can really do just about anything. Needs a working restore!
@@ -2091,7 +2091,7 @@ for ((i=0; i < ${#PID[@]}; i++)); do
           STRIP_LEVEL=2
           if [[ -f $PARB/${TXT}.patch ]]; then
                printtask "... apply $TXT.patch ..."
-               $PATCH_BINARY -Nls -p$STRIP_LEVEL -d system/ < $PARB/${TXT}.patch &>> ${TXT}.log
+               $PATCH_BINARY -Nls -p$STRIP_LEVEL -d system/ < $PARB/${TXT}.patch 2>&1 >> ${TXT}.log
                #cat ${TXT}.log | tee -a "$LOG"
                [[ $(grep FAILED ${TXT}.log) != "" ]] && print_error "failed $TXT.patch"
           fi
@@ -2107,7 +2107,7 @@ for ((i=0; i < ${#PID[@]}; i++)); do
           fi
           if [[ -f $PAR/${TXT}.sh ]]; then
                printtask "... apply $TXT.sh ..."
-               . $PAR/${TXT}.sh &>> ${TXT}.log || print_error "failed $TXT.sh"
+               . $PAR/${TXT}.sh 2>&1 >> ${TXT}.log || print_error "failed $TXT.sh"
           fi
           garbage system/
      done
@@ -2128,11 +2128,11 @@ fi
 for FILE in ${JID[@]}; do
      JAR=${FILE##*/}
      printtask "... rebuild $JAR ..."
-     java -Xmx512M -jar $SMALI_BINARY -a $API tmp/${FILE}.out/smali -o tmp/${FILE}.out/classes.dex &>> ${LOG}
+     java -Xmx512M -jar $SMALI_BINARY -a $API tmp/${FILE}.out/smali -o tmp/${FILE}.out/classes.dex 2>&1 >> ${LOG}
      [ -f tmp/${FILE}.out/classes.dex ] || smali_error "failed compiling $JAR !!!"
-     jar -ufv ${FILE} -C tmp/${FILE}.out/ classes.dex &>> ${LOG}
+     jar -ufv ${FILE} -C tmp/${FILE}.out/ classes.dex 2>&1 >> ${LOG}
      if [ $FILE == "system/framework/framework.jar" ]; then
-          jar -ufv ${FILE} -C tmp/${FILE}.out/ preloaded-classes &>> ${LOG}
+          jar -ufv ${FILE} -C tmp/${FILE}.out/ preloaded-classes 2>&1 >> ${LOG}
      fi
 done
 
@@ -2142,7 +2142,7 @@ for FILE in ${APKID[@]}; do
      if [ -d tmp/${FILE}.out ]; then
           apk_was_copied=false
           printtask "... rebuild $APK ..."
-          java -jar apktool.jar b tmp/${FILE}.out &>> ${LOG} || apk_copy
+          java -jar apktool.jar b tmp/${FILE}.out 2>&1 >> ${LOG} || apk_copy
           if !("$apk_was_copied"); then
                jar -uvf $FILE -C tmp/${FILE}.out/build/apk/ . > /dev/null 2>> "$LOG"
           fi
