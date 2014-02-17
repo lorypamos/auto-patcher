@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # The MIT License (MIT)
 #
@@ -222,6 +222,10 @@ set -a
 # Set any environmental variables
 LANG=C
 CYGWIN=false
+less=$((which less) 2>/dev/null)
+more=$((which more) 2>/dev/null)
+found_pager=${less:-$more}
+PAGER=${PAGER:-$found_pager}
 
 # we use baksmali-2.0 for Android 4.4 and greater- see proberom function.
 BAKSMALI_BINARY=baksmali.jar
@@ -309,9 +313,9 @@ display_help () {
      echo "*******************************************************************"
      echo "Note: There are ONLY 4 ROMTYPES: [pa, cm, aokp, and aosp]"
      echo ""
-     echo "   Specifying ROMTYPE is DEPRECATED as of Autopatcherv3.1.0"
+     echo "   Specifying ROMTYPE is DEPRECATED as of Autopatcher v3.1.0"
      echo ""
-     find -H *  \( -name aokp -o -name cm -o -name aosp -o -name pa -o -name all -o -name generic \) -prune | column -c 85 | more -d -7
+     find . -H *  \( -name aokp -o -name cm -o -name aosp -o -name pa -o -name all -o -name generic \) -prune | column -c 85 | $PAGER -d -7
      echo ""
      echo "*****************************************************************"
      echo "Specific auto_patcher help options"
@@ -334,13 +338,14 @@ romtype_help () {
 }
 
 cleanup () {
+     [[ -z ${AUTOPATCHER_KEEP} ]] &&
      [[ -n $ROOT ]] && \rm -rf "$ROOT"/tmp*
 }
 
 garbage () {
     unset GARBAGE
-    GARBAGE=($(find $@ -name "*.orig")) && rm -rf ${GARBAGE[@]} && echo "GARBAGE= ${GARBAGE[@]}" >> "$LOG"
-    GARBAGE=($(find $@ -name "*.rej"))  && rm -rf ${GARBAGE[@]} && echo "GARBAGE= ${GARBAGE[@]}" >> "$LOG"
+    GARBAGE=($(find $@ -name "*.orig")) && echo "GARBAGE= ${GARBAGE[@]}" >> "$LOG" && [[ -z ${AUTOPATCHER_KEEP} ]] && rm -rf ${GARBAGE[@]}
+    GARBAGE=($(find $@ -name "*.rej"))  && echo "GARBAGE= ${GARBAGE[@]}" >> "$LOG" && [[ -z ${AUTOPATCHER_KEEP} ]] && rm -rf ${GARBAGE[@]}
 }
 
 
@@ -1254,17 +1259,17 @@ context_editor (){
      print_to_log "Matching the created file: ContextImpl\$$CONTEXT_NUMBER for $P/$A/$RID"
 
      # Only returns patches that create new files- This only matches patches with zero subtracted lines
-     FIRST_CONTEXT_MATCH=( $(find patches/$P/$A/$RID -type f -name *ContextImpl* -and -name *"$CONTEXT_NUMBER"*) )
+     FIRST_CONTEXT_MATCH=( $(find patches/$P/$A/$RID -type f -name '*ContextImpl*' -and -name "*${CONTEXT_NUMBER}*") )
      for c in ${FIRST_CONTEXT_MATCH[@]}; do
-          CORRECT_CONTEXT_MATCH=( ${CORRECT_CONTEXT_MATCH[@]} $(grep -HL '^-    ' $c) )
+          CORRECT_CONTEXT_MATCH=( ${CORRECT_CONTEXT_MATCH[@]} $(grep -HL '^-    ' ${c}) )
      done
 
      # only proceed if match is found TODO change to check for non-zero
      if ( [[ ${#CORRECT_CONTEXT_MATCH[@]} -gt 0 ]] ); then
           for context_match in ${CORRECT_CONTEXT_MATCH[@]}; do
                # strips file name to return path
-               context_match=$(echo $context_match | sed 's|\(.*\)/.*|\1|')
-               POSSIBLE_CONTEXT_DIR=( ${POSSIBLE_CONTEXT_DIR[@]} $context_match  )
+               context_match=$(echo ${context_match} | sed -e 's|\(.*\)/.*|\1|')
+               POSSIBLE_CONTEXT_DIR=( ${POSSIBLE_CONTEXT_DIR[@]} ${context_match} )
           done
      fi
      [[ ${#POSSIBLE_CONTEXT_DIR[@]} == 0 ]] && print_error "This rom needs updated patches!\n \t\t Please open an issue at github.com/mateor/auto-patcher!"
@@ -1288,14 +1293,14 @@ patch_matcher () {
      MATCHED_FILE=${FAILED_FILE##*_}     # strip headers from file name (e.g.returns 'SipPhone.patch')
 
      unset POSSIBLE_MATCHES
-     PREP_POSSIBLE_MATCHES=$( find patches/$P/$ANDR -name *"$MATCHED_FILE"* )
+     PREP_POSSIBLE_MATCHES=$( find patches/$P/$ANDR -name "*${MATCHED_FILE}*" )
 
      # Test for empty and test for too large (100?)
      ( [ "${#PREP_POSSIBLE_MATCHES[@]}" = 0 ] || [[ "${#PREP_POSSIBLE_MATCHES[@]}" -gt 100 ]] ) && print_error "There are ${#PREP_POSSIBLE_MATCHES[@]} possible matches, that's a problem!"
 
      # filter out patches that create new files, a silent failure since skipping those patches is stdout
      for possible in ${PREP_POSSIBLE_MATCHES[@]}; do
-          CHECKED_MATCHES=$(grep -Hl '^-    ' $possible)
+          CHECKED_MATCHES=$(grep -Hl '^-    ' ${possible})
           POSSIBLE_MATCHES=( ${POSSIBLE_MATCHES[@]} "$CHECKED_MATCHES" )
      done
 
@@ -1303,7 +1308,7 @@ patch_matcher () {
      #    cannot use success of patch process, skipped patch is stderr but okay for us.
      MATCH_SUCCESS=false
      for p in ${POSSIBLE_MATCHES[@]}; do
-          $PATCH_BINARY --dry-run -Nls -p$STRIP_LEVEL -d tmp/${FILE}.out < $p 2>&1 > MATCH.log
+          $PATCH_BINARY --dry-run -Nls -p${STRIP_LEVEL} -d tmp/${FILE}.out < ${p} &>> MATCH.log
           if ( [[ $(grep FAILED MATCH.log) = "" ]] ); then
                     # This below is temporary debug logging.
                     print_to_log "Succesful match found! Swapping $p for $FAILED_FILE!!"
@@ -1379,6 +1384,7 @@ ERR="$TEMP"/ERR
 # Looks like {ERR}.log is empty for OSX. Lets create it manually
 touch "$ERR".log
 exec 2>> ${ERR}.log
+
 
 PATCH_BINARY=patch
 PINGCOUNT="-c1"
@@ -1819,7 +1825,7 @@ for FILE in ${JID[@]}; do
      fi
 done
 
-     # install framework-files for apktool
+# install framework-files for apktool
 if [ ${#AID[@]} -gt 0 ]; then
      jar -xvf "$ROMX" system/framework/framework-res.apk >> "$LOG"
      printtask "... installing framework files ..."
@@ -1834,7 +1840,7 @@ if [ ${#AID[@]} -gt 0 ]; then
      done
 fi
 
-     # Unpack image files {boot.img only so far...}
+# Unpack image files {boot.img only so far...}
 for FILE in ${IID[@]}; do
      printtask "### unpacking $FILE ###"
      case "$FILE" in
@@ -1959,7 +1965,7 @@ for ((i=0; i < ${#PID[@]}; i++)); do
           declare -a PATCH_QUEUE=("patches/$P/$A/$R/$B/$NAME"_*patch)
           declare -a FAILED_PATCH_QUEUE
           # Sanity check for glob
-          [[ "${PATCH_QUEUE[0]}" == "patches/$P/$A/$R/$B/$NAME"'_*patch' ]] && print_error "No matching patches!!"
+          [[ "${PATCH_QUEUE[0]}" == "patches/$P/$A/$R/$B/${NAME}_*patch" ]] && print_error "No matching patches!!"
           # check for INCREMENTAL patches- for hotfixes. To keep us from having to rebuild all patches for small bugs
           unset INCREMENTAL
           [ -f "patches/$P/$A/$R/$B/$NAME"-* ] && declare -a INCREMENTAL=( "patches/$P/$A/$R/$B/$NAME"-* )
@@ -2036,9 +2042,9 @@ for ((i=0; i < ${#PID[@]}; i++)); do
           STRIP_LEVEL=2
 
           if [ -d "tmp/${FILE}.out" ] ; then
-               declare -a PATCH_QUEUE=("patches/$P/$A/$R/$B/$APK"_*patch)
+               declare -a PATCH_QUEUE=("patches/$P/$A/$R/$B/${APK}_*patch")
                # Sanity check for glob
-               [[ "${PATCH_QUEUE[0]}" == "patches/$P/$A/$R/$B/$APK"'_*patch' ]] && print_error "No matching patches!!"
+               [[ "${PATCH_QUEUE[0]}" == "patches/$P/$A/$R/$B/${APK}_*patch" ]] && print_error "No matching patches!!"
                unset FAILED_PATCH_QUEUE
                for ((k=0;k < ${#PATCH_QUEUE[@]}; k++)) do
                     # dry-run until we build a completely succesful patch queue. Add $k to FAILED upon failure
@@ -2075,7 +2081,7 @@ for ((i=0; i < ${#PID[@]}; i++)); do
           IMG=${FILE##*/}
           STRIP_LEVEL=1
           printtask "... applying $IMG.patch ..."
-          $PATCH_BINARY -Nls -p$STRIP_LEVEL -d boot/ramdisk < $PARB/${IMG}.patch >> "$LOG" || print_error "failed patching $FILE"
+          $PATCH_BINARY -Nls -p$STRIP_LEVEL -d boot/ramdisk < $PARB/${IMG}.patch &>> "$LOG" || print_error "failed patching $FILE"
      done
 
 # Text Editing Functions --this can really do just about anything. Needs a working restore!
@@ -2085,7 +2091,7 @@ for ((i=0; i < ${#PID[@]}; i++)); do
           STRIP_LEVEL=2
           if [[ -f $PARB/${TXT}.patch ]]; then
                printtask "... apply $TXT.patch ..."
-               $PATCH_BINARY -Nls -p$STRIP_LEVEL -d system/ < $PARB/${TXT}.patch 2>&1 > ${TXT}.log 
+               $PATCH_BINARY -Nls -p$STRIP_LEVEL -d system/ < $PARB/${TXT}.patch &>> ${TXT}.log
                #cat ${TXT}.log | tee -a "$LOG"
                [[ $(grep FAILED ${TXT}.log) != "" ]] && print_error "failed $TXT.patch"
           fi
@@ -2101,33 +2107,32 @@ for ((i=0; i < ${#PID[@]}; i++)); do
           fi
           if [[ -f $PAR/${TXT}.sh ]]; then
                printtask "... apply $TXT.sh ..."
-               . $PAR/${TXT}.sh 2>&1 >> ${TXT}.log || print_error "failed $TXT.sh"
+               . $PAR/${TXT}.sh &>> ${TXT}.log || print_error "failed $TXT.sh"
           fi
           garbage system/
      done
 done
 
-     # Device specific scripts- Placement is up-for-review
+# Device specific scripts- Placement is up-for-review
 if [ -f patches/.devices/$DID/$DID.sh ]; then
      . patches/.devices/$DID/$DID.sh
 fi
 
-     # Replace updater-script for CM7- it formats system -Testing
+# Replace updater-script for CM7- it formats system -Testing
 if [ "$ANDR" == "gingerbread" ]; then
      replace_updater
 fi
 
 # Rebuilding system files
-
 [[ -n ${JID[@]} ]] && printtask "### rebuild jar ###"
 for FILE in ${JID[@]}; do
      JAR=${FILE##*/}
      printtask "... rebuild $JAR ..."
-     java -Xmx512M -jar $SMALI_BINARY -a $API tmp/${FILE}.out/smali -o tmp/${FILE}.out/classes.dex >> "$LOG" 2>> "$LOG"
+     java -Xmx512M -jar $SMALI_BINARY -a $API tmp/${FILE}.out/smali -o tmp/${FILE}.out/classes.dex &>> ${LOG}
      [ -f tmp/${FILE}.out/classes.dex ] || smali_error "failed compiling $JAR !!!"
-     jar -ufv ${FILE} -C tmp/${FILE}.out/ classes.dex >> "$LOG" 2>> "$LOG"
+     jar -ufv ${FILE} -C tmp/${FILE}.out/ classes.dex &>> ${LOG}
      if [ $FILE == "system/framework/framework.jar" ]; then
-          jar -ufv ${FILE} -C tmp/${FILE}.out/ preloaded-classes >> "$LOG" 2>> "$LOG"
+          jar -ufv ${FILE} -C tmp/${FILE}.out/ preloaded-classes &>> ${LOG}
      fi
 done
 
@@ -2137,7 +2142,7 @@ for FILE in ${APKID[@]}; do
      if [ -d tmp/${FILE}.out ]; then
           apk_was_copied=false
           printtask "... rebuild $APK ..."
-          java -jar apktool.jar b tmp/${FILE}.out >> "$LOG" 2>> "$LOG" || apk_copy
+          java -jar apktool.jar b tmp/${FILE}.out &>> ${LOG} || apk_copy
           if !("$apk_was_copied"); then
                jar -uvf $FILE -C tmp/${FILE}.out/build/apk/ . > /dev/null 2>> "$LOG"
           fi
