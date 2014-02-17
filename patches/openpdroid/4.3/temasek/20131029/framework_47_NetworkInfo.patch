@@ -1,0 +1,18 @@
+diff -Npruw stock-framework/smali/android/net/NetworkInfo.smali pdroid-framework/smali/android/net/NetworkInfo.smali
+--- stock-framework/smali/android/net/NetworkInfo.smali	2013-10-29 11:37:52.784275184 +0100
++++ pdroid-framework/smali/android/net/NetworkInfo.smali	2013-10-29 11:36:35.137828968 +0100
+@@ -882,6 +882,14 @@
+     throw v0
+ .end method
+ 
++.method public setState(Landroid/net/NetworkInfo$State;)V
++    .registers 2
++
++    iput-object p1, p0, Landroid/net/NetworkInfo;->mState:Landroid/net/NetworkInfo$State;
++
++    return-void
++.end method
++
+ .method setSubtype(ILjava/lang/String;)V
+     .registers 4
+ 

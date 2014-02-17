@@ -1,0 +1,12 @@
+diff -Npruw stock-telephony/smali/com/android/internal/telephony/sip/SipPhone.smali pdroid-telephony/smali/com/android/internal/telephony/sip/SipPhone.smali
+--- stock-telephony/smali/com/android/internal/telephony/sip/SipPhone.smali	2013-11-27 12:02:55.321752208 +0100
++++ pdroid-telephony/smali/com/android/internal/telephony/sip/SipPhone.smali	2013-11-27 12:03:01.424722083 +0100
+@@ -41,7 +41,7 @@
+ 
+ 
+ # direct methods
+-.method constructor <init>(Landroid/content/Context;Lcom/android/internal/telephony/PhoneNotifier;Landroid/net/sip/SipProfile;)V
++.method public constructor <init>(Landroid/content/Context;Lcom/android/internal/telephony/PhoneNotifier;Landroid/net/sip/SipProfile;)V
+     .registers 7
+     .param p1    # Landroid/content/Context;
+     .param p2    # Lcom/android/internal/telephony/PhoneNotifier;

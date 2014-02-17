@@ -1,0 +1,12 @@
+diff -Npruw stock-framework/smali/android/hardware/Camera$Parameters.smali pdroid-framework/smali/android/hardware/Camera$Parameters.smali
+--- stock-framework/smali/android/hardware/Camera$Parameters.smali	2013-11-25 19:15:05.398456539 +0100
++++ pdroid-framework/smali/android/hardware/Camera$Parameters.smali	2013-11-25 19:15:11.642364068 +0100
+@@ -2411,7 +2411,7 @@
+ .method public getMinExposureCompensation()I
+     .registers 3
+ 
+-    const-string v0, "min-exposure-compensation"
++    const-string/jumbo v0, "min-exposure-compensation"
+ 
+     const/4 v1, 0x0
+ 

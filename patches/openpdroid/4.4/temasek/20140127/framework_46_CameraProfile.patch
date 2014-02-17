@@ -1,0 +1,12 @@
+diff -Npruw stock-framework/smali/android/media/CameraProfile.smali pdroid-framework/smali/android/media/CameraProfile.smali
+--- stock-framework/smali/android/media/CameraProfile.smali	2014-01-27 10:19:17.136161734 +0100
++++ pdroid-framework/smali/android/media/CameraProfile.smali	2014-01-27 10:19:22.235087786 +0100
+@@ -32,7 +32,7 @@
+ 
+     sput-object v0, Landroid/media/CameraProfile;->sCache:Ljava/util/HashMap;
+ 
+-    const-string v0, "media_jni"
++    const-string/jumbo v0, "media_jni"
+ 
+     invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
+ 
